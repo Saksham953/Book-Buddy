@@ -63,7 +63,7 @@ export default function BrowsePage() {
   React.useEffect(() => {
     const fetchBooks = async () => {
       try {
-        const res = await fetch("http://localhost:5000/api/books");
+        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/books`);
         if (res.ok) {
           const data = await res.json();
           setBooks(data);

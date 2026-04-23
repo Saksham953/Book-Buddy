@@ -4,6 +4,7 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 from dotenv import load_dotenv
 from botocore.exceptions import ClientError
+from decimal import Decimal
 
 # Load environment variables
 load_dotenv()
@@ -28,6 +29,26 @@ def get_books_table():
 def get_orders_table():
     return dynamodb.Table('Orders')
 
+# Helper to convert float to Decimal for DynamoDB
+def convert_floats_to_decimals(obj):
+    if isinstance(obj, list):
+        return [convert_floats_to_decimals(i) for i in obj]
+    elif isinstance(obj, dict):
+        return {k: convert_floats_to_decimals(v) for k, v in obj.items()}
+    elif isinstance(obj, float):
+        return Decimal(str(obj))
+    return obj
+
+# Helper to convert Decimal to float for JSON response
+def convert_decimals_to_floats(obj):
+    if isinstance(obj, list):
+        return [convert_decimals_to_floats(i) for i in obj]
+    elif isinstance(obj, dict):
+        return {k: convert_decimals_to_floats(v) for k, v in obj.items()}
+    elif isinstance(obj, Decimal):
+        return float(obj)
+    return obj
+
 # --- API ROUTES ---
 
 @app.route('/api/health', methods=['GET'])
@@ -45,12 +66,7 @@ def get_books():
         table = get_books_table()
         response = table.scan()
         books = response.get('Items', [])
-        
-        # If table is empty, return a helpful message instead of failing
-        if not books:
-            return jsonify({"message": "No books found in DynamoDB. Please populate your 'Books' table.", "books": []}), 200
-            
-        return jsonify(books)
+        return jsonify(convert_decimals_to_floats(books))
     except Exception as e:
         print(f"Error fetching books: {e}")
         # Fallback to a single mock item to prevent UI crash during setup
@@ -68,10 +84,14 @@ def add_book():
     """Add a new book to DynamoDB"""
     data = request.json
     try:
+        # Convert floats to Decimals for Boto3/DynamoDB
+        data = convert_floats_to_decimals(data)
+        
         table = get_books_table()
         table.put_item(Item=data)
         return jsonify({"message": "Book added to DynamoDB successfully", "book": data}), 201
     except Exception as e:
+        print(f"Error adding book: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/orders/<user_id>', methods=['GET'])
@@ -95,6 +115,9 @@ def create_order():
     data = request.json
     # data should contain: orderId, userId, items, timestamp, status, deliveryDate, progress
     try:
+        # Convert floats to Decimals for Boto3/DynamoDB
+        data = convert_floats_to_decimals(data)
+        
         # 1. Save to DynamoDB
         table = get_orders_table()
         table.put_item(Item=data)
@@ -113,6 +136,18 @@ def create_order():
         
         return jsonify({"message": "Order created and notification sent", "order": data}), 201
     except Exception as e:
+        print(f"Error creating order: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/books/<book_id>', methods=['DELETE'])
+def delete_book(book_id):
+    """Delete a book from DynamoDB"""
+    try:
+        table = get_books_table()
+        table.delete_item(Key={'id': book_id})
+        return jsonify({"message": "Book deleted successfully"}), 200
+    except Exception as e:
+        print(f"Error deleting book: {e}")
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':

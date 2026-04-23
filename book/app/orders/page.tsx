@@ -33,7 +33,7 @@ function OrdersContent() {
     // Fetch books to get correct titles
     const fetchBooks = async () => {
       try {
-        const res = await fetch("http://localhost:5000/api/books");
+        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/books`);
         if (res.ok) {
           const data = await res.json();
           setAllBooks(data);
@@ -123,7 +123,7 @@ function OrdersContent() {
                   <div className="flex items-center gap-10">
                     <div className="text-right">
                       <p className="text-xs text-neutral-500 uppercase tracking-widest font-black mb-1">Grand Total</p>
-                      <p className="text-3xl font-black text-white tracking-tighter">${totalPrice.toFixed(2)}</p>
+                      <p className="text-3xl font-black text-white tracking-tighter">${Number(totalPrice).toFixed(2)}</p>
                     </div>
                     <div className="px-5 py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 shadow-[0_0_20px_rgba(16,185,129,0.1)]">
                       <span className="text-xs font-black text-emerald-400 uppercase tracking-widest">

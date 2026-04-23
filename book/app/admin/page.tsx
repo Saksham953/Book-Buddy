@@ -30,6 +30,11 @@ export default function AdminPage() {
   const [description, setDescription] = useState("");
   const [image, setImage] = useState("");
   const [previewUrl, setPreviewUrl] = useState("");
+  
+  // UI State
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
 
   useEffect(() => {
     if (isLoaded && (!userId || !isAdmin)) {
@@ -41,7 +46,7 @@ export default function AdminPage() {
     // Fetch books from our Flask backend
     const fetchBooks = async () => {
       try {
-        const res = await fetch("http://localhost:5000/api/books");
+        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/books`);
         if (res.ok) {
           const data = await res.json();
           setBooks(data);
@@ -58,6 +63,9 @@ export default function AdminPage() {
 
   const handleAddBook = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitting(true);
+    setError(null);
+    setSuccess(false);
     
     const newBook = {
       id: Math.random().toString(36).substr(2, 9),
@@ -70,7 +78,7 @@ export default function AdminPage() {
     };
     
     try {
-      const res = await fetch("http://localhost:5000/api/books", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/books`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newBook),
@@ -78,6 +86,7 @@ export default function AdminPage() {
       
       if (res.ok) {
         setBooks([...books, newBook]);
+        setSuccess(true);
         // Reset form
         setTitle("");
         setAuthor("");
@@ -85,15 +94,24 @@ export default function AdminPage() {
         setDescription("");
         setImage("");
         setPreviewUrl("");
+        
+        // Clear success message after 3 seconds
+        setTimeout(() => setSuccess(false), 3000);
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        setError(errorData.error || `Failed to add book (Status: ${res.status})`);
       }
-    } catch (error) {
-      console.error("Failed to add book:", error);
+    } catch (err) {
+      console.error("Failed to add book:", err);
+      setError("Failed to connect to the backend server. Please check if the backend is running.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const handleDeleteBook = async (id: string) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/books/${id}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/books/${id}`, {
         method: "DELETE",
       });
       
@@ -185,11 +203,28 @@ export default function AdminPage() {
                   placeholder="https://example.com/preview.pdf"
                 />
               </div>
+              {error && (
+                <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm p-3 rounded-lg">
+                  {error}
+                </div>
+              )}
+              
+              {success && (
+                <div className="bg-green-500/10 border border-green-500/20 text-green-400 text-sm p-3 rounded-lg">
+                  Book added successfully!
+                </div>
+              )}
+
               <button 
                 type="submit"
-                className="w-full bg-white text-black font-semibold rounded-lg px-4 py-3 hover:bg-neutral-200 transition-colors mt-2"
+                disabled={submitting}
+                className={`w-full font-semibold rounded-lg px-4 py-3 transition-colors mt-2 ${
+                  submitting 
+                    ? "bg-neutral-800 text-neutral-500 cursor-not-allowed" 
+                    : "bg-white text-black hover:bg-neutral-200"
+                }`}
               >
-                Add Book
+                {submitting ? "Adding Book..." : "Add Book"}
               </button>
             </form>
           </div>
@@ -218,7 +253,7 @@ export default function AdminPage() {
                       <tr key={book.id} className="border-b border-white/5 last:border-0">
                         <td className="py-4 font-medium">{book.title}</td>
                         <td className="py-4 text-neutral-400">{book.author}</td>
-                        <td className="py-4">${book.price.toFixed(2)}</td>
+                        <td className="py-4">${Number(book.price).toFixed(2)}</td>
                         <td className="py-4 text-right">
                           <button 
                             onClick={() => handleDeleteBook(book.id)}
