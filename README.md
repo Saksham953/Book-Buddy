@@ -1,15 +1,15 @@
 # BookBuddy
 
-A full-stack cloud-native bookstore platform built with **Next.js, React, TypeScript, Flask, and AWS**.
+BookBuddy is a full-stack cloud-native bookstore platform built with **Next.js, React, TypeScript, Flask, and AWS**.
 
-BookBuddy lets users browse books, manage a cart, complete purchases through Stripe, and track their orders. It also includes Clerk authentication, an admin dashboard, and AWS SNS notifications for new orders.
+It provides book discovery, cart management, Stripe checkout, order tracking, Clerk authentication, an admin dashboard, and AWS SNS notifications for new orders.
 
 ## Features
 
 * Book search and discovery by title, author, and category
 * Book details, ratings, reviews, and PDF previews
 * Shopping cart and Stripe Checkout
-* Order history and order tracking
+* Order history and tracking
 * Clerk authentication and protected routes
 * Admin dashboard for book management
 * AWS SNS notifications for new orders
@@ -24,29 +24,31 @@ BookBuddy lets users browse books, manage a cart, complete purchases through Str
 | Cloud          | AWS EC2, AWS SNS                               |
 | Authentication | Clerk                                          |
 | Payments       | Stripe                                         |
-| UI / Animation | Three.js, GSAP, Lucide                         |
+| UI & Animation | Three.js, GSAP, Lucide                         |
 
 ## Architecture
 
 ```text
-Browser
-   |
-   v
-Next.js / React
-   |
-   +---------> Clerk (Authentication)
-   |
-   +---------> Stripe (Payments)
-   |
-   v
-Flask REST API
-   |
-   +---------> DynamoDB
-   |            - Books
-   |            - Orders
-   |
-   +---------> AWS SNS
-                - Order Notifications
+                         ┌──────────────┐
+                         │    Browser   │
+                         └──────┬───────┘
+                                │
+                                ▼
+                       ┌─────────────────┐
+                       │ Next.js / React │
+                       └───────┬─────────┘
+                               │
+                 ┌─────────────┼─────────────┐
+                 │             │             │
+                 ▼             ▼             ▼
+              Clerk          Stripe       Flask API
+           Authentication   Payments          │
+                                             │
+                                      ┌──────┴──────┐
+                                      │             │
+                                      ▼             ▼
+                                  DynamoDB        AWS SNS
+                               Books / Orders   Notifications
 ```
 
 ## Project Structure
@@ -98,9 +100,11 @@ pip install -r requirements.txt
 python app.py
 ```
 
-The API runs at:
+The Flask API runs on:
 
-`http://localhost:5000`
+```text
+http://localhost:5000
+```
 
 ### Frontend
 
@@ -112,9 +116,11 @@ npm install
 npm run dev
 ```
 
-The application runs at:
+The application runs on:
 
-`http://localhost:3000`
+```text
+http://localhost:3000
+```
 
 ## Environment Variables
 
@@ -140,11 +146,11 @@ NEXT_PUBLIC_BACKEND_URL=http://localhost:5000
 NEXT_PUBLIC_URL=http://localhost:3000
 ```
 
-> Do not commit `.env` or `.env.local` files, AWS credentials, Stripe secrets, or Clerk secrets to the repository.
+> **Security:** Never commit `.env` or `.env.local` files, AWS credentials, Stripe secrets, or Clerk secrets to the repository.
 
 ## AWS Configuration
 
-BookBuddy uses two DynamoDB tables:
+BookBuddy uses Amazon DynamoDB for books and orders.
 
 | Table    | Primary Key        |
 | -------- | ------------------ |
@@ -159,7 +165,7 @@ Create an SNS topic named:
 BookStoreOrders
 ```
 
-The backend publishes an SNS notification whenever a new order is created.
+The backend publishes an SNS notification when a new order is created.
 
 Required IAM permissions:
 
@@ -169,6 +175,8 @@ dynamodb:PutItem
 dynamodb:DeleteItem
 sns:Publish
 ```
+
+For production deployments, use the principle of least privilege and avoid broad IAM permissions.
 
 ## API
 
@@ -220,12 +228,12 @@ Create Order
 
 ## Security
 
-* Clerk handles authentication and protected routes.
+* Clerk manages authentication and protected routes.
 * Secrets are provided through environment variables.
-* AWS resources are accessed through IAM permissions.
+* AWS resources are accessed using IAM permissions.
 * Stripe webhook secrets remain server-side.
 * Environment files are excluded from version control.
 
 ## Project Focus
 
-BookBuddy demonstrates a practical full-stack architecture combining **React/Next.js, Flask REST APIs, authentication, payment processing, AWS cloud services, DynamoDB, and event-driven notifications**.
+BookBuddy demonstrates a practical full-stack architecture combining **Next.js, React, Flask REST APIs, authentication, payment processing, AWS cloud services, DynamoDB, and event-driven notifications**.
